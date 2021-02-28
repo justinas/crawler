@@ -33,11 +33,7 @@ pub async fn crawl(storage: Arc<Storage>, mut base_url: url::Url) {
         visited.insert(u.clone());
 
         let body = match get(u.as_str()).await {
-            Ok(Some(t)) => t,
-            Ok(None) => {
-                log::debug!("Not html: {}", u);
-                continue;
-            }
+            Ok(t) => t,
             Err(e) => {
                 log::error!("Error getting {}: {}", u, e);
                 continue;
@@ -46,7 +42,6 @@ pub async fn crawl(storage: Arc<Storage>, mut base_url: url::Url) {
 
         if let Ok(urls) = extract_urls(&body) {
             for url in urls.into_iter().flat_map(|u| base_url.join(&u)) {
-                // TODO: Add to storage
                 let url_string = url.to_string();
                 storage
                     .write()
@@ -64,12 +59,8 @@ pub async fn crawl(storage: Arc<Storage>, mut base_url: url::Url) {
     }
 }
 
-pub async fn get(url: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
-    let resp = reqwest::get(url).await?;
-    if resp.headers().get("Content-Type").map(|v| v.as_bytes()) != Some(b"text/html") {
-        return Ok(None);
-    }
-    Ok(Some(resp.text().await?))
+pub async fn get(url: &str) -> Result<String, Box<dyn std::error::Error>> {
+    Ok(reqwest::get(url).await?.text().await?)
 }
 
 pub fn extract_urls(body: &str) -> Result<Vec<String>, ()> {
