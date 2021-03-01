@@ -40,20 +40,18 @@ pub async fn crawl(storage: Arc<Storage>, mut base_url: url::Url) {
             }
         };
 
-        if let Ok(urls) = extract_urls(&body) {
-            for url in urls.into_iter().flat_map(|u| base_url.join(&u)) {
-                let url_string = url.to_string();
-                storage
-                    .write()
-                    .unwrap()
-                    .entry(base_host.clone())
-                    .or_default()
-                    .insert(url_string.clone());
+        for url in extract_urls(&base_url, &body) {
+            let url_string = url.to_string();
+            storage
+                .write()
+                .unwrap()
+                .entry(base_host.clone())
+                .or_default()
+                .insert(url_string.clone());
 
-                // If internal URL: crawl it too
-                if url.host_str() == Some(&base_host) && !visited.contains(&url_string) {
-                    locations.push_back(url_string)
-                }
+            // If internal URL: crawl it too
+            if url.host_str() == Some(&base_host) && !visited.contains(&url_string) {
+                locations.push_back(url_string)
             }
         }
     }
@@ -63,10 +61,37 @@ pub async fn get(url: &str) -> Result<String, Box<dyn std::error::Error>> {
     Ok(reqwest::get(url).await?.text().await?)
 }
 
-pub fn extract_urls(body: &str) -> Result<Vec<String>, ()> {
-    Ok(Html::parse_document(body)
+pub fn extract_urls(base_url: &url::Url, body: &str) -> Vec<url::Url> {
+    Html::parse_document(body)
         .select(&SELECTOR)
         .flat_map(|n| n.value().attr("href"))
-        .map(ToOwned::to_owned)
-        .collect())
+        .flat_map(|u| base_url.join(&u))
+        .collect()
+}
+
+#[cfg(test)]
+mod test {
+    use super::extract_urls;
+
+    #[test]
+    fn test_extract_urls() {
+        let body = r#"
+            <a href="/">Home</a>
+            <a href="/about">About</a>
+            <p><a href="https://external-link.com">External</a></p>
+        "#;
+        let base_url = url::Url::parse("http://example.com").unwrap();
+        let result: Vec<_> = extract_urls(&base_url, body)
+            .into_iter()
+            .map(|u| u.to_string())
+            .collect();
+        assert_eq!(
+            vec![
+                "http://example.com/",
+                "http://example.com/about",
+                "https://external-link.com/"
+            ],
+            result
+        );
+    }
 }
