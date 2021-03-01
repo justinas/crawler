@@ -23,7 +23,7 @@ POST /crawl
 
     start crawling
 
-    > {"domain": "http://justinas.org"}
+    > {"domain": "http://example.com"}
 
 GET /domains
 
