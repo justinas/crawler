@@ -14,3 +14,9 @@ Test with:
     ["example.com"]
     $ curl http://127.0.0.1:8080/domains/example.com
     {"count":1,"urls":["https://www.iana.org/domains/example"]}
+
+## Docker image
+
+Build with:
+
+    $ docker build .
