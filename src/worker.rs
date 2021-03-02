@@ -20,6 +20,8 @@ pub async fn crawl(storage: Arc<Storage>, mut base_url: url::Url) {
     base_url.set_query(None);
     base_url.set_fragment(None);
 
+    log::debug!("Crawling {}", base_url);
+
     let base_host = base_url.host_str().unwrap().to_owned(); // host presence validated in `crawl` handler
 
     let mut visited = HashSet::new();
@@ -55,6 +57,8 @@ pub async fn crawl(storage: Arc<Storage>, mut base_url: url::Url) {
             }
         }
     }
+
+    log::debug!("Finished crawling {}", base_url);
 }
 
 pub async fn get(url: &str) -> Result<String, Box<dyn std::error::Error>> {
